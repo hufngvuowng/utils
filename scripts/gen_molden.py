@@ -24,7 +24,8 @@ def gen_molden_from_rhfchk(chk_path : str, molden_path : str):
 	print(mol.nelectron)
 	mo_coeff = load_chkfile_key(chk_path, 'scf/mo_coeff')
 	mo_energy = load_chkfile_key(chk_path, 'scf/mo_energy')
-	mo_occ = load_chkfile_key(chk_path, 'scf/mo_cc')
+	mo_occ = load_chkfile_key(chk_path, 'scf/mo_occ')
+
 
 	with open(molden_path, 'w') as f:
 		molden.header(mol=mol, fout=f)
@@ -34,7 +35,7 @@ def gen_molden_from_caschk(chk_path : str, molden_path : str):
 	pass
 
 if __name__ == '__main__':
-	base_dir = '/Users/aarodynamic95/projects/Research/metallocene_molden/DZ/nihmferrocene_0_3/'
+	base_dir = '/Users/aarodynamic95/projects/Research/3dTMV/14/init'
 	chk_path = os.path.join(base_dir, 'rhf.chk')
 	molden_path = os.path.join(base_dir, 'RHF_orbs.molden')
 	gen_molden_from_rhfchk(chk_path, molden_path)

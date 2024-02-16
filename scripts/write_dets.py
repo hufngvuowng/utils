@@ -229,4 +229,4 @@ def write_CI_exp_files(det_file, n_act_orb=0, n_core=0, tot_wt=0.995):
 
 if __name__ == '__main__':
 	det_file_path = '/Users/aarodynamic95/projects/Research/GIT/utils/shci_test_files/dets.bin'
-	write_CI_exp_files(det_file_path, 37, 58, 0.99)
+	write_CI_exp_files(det_file_path, 73, 45, 0.99)
