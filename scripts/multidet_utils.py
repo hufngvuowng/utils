@@ -4,7 +4,7 @@ determinant wavefuncton (orthgonal).
 import numpy as np
 import os
 
-def parse_ci_coeff(ci_coeff_file, ncas_a, ncas_b, ncore=0):
+def parse_ci_coeff(ci_coeff_file, ncas_a, ncas_b, ncore=0, ndet=0):
 	'''Parse a CI_coeff.dat file, for example:
 	```
 	0b111111111111       0b11111111111          0.6208214919329170
@@ -81,6 +81,7 @@ def parse_ci_coeff(ci_coeff_file, ncas_a, ncas_b, ncore=0):
 	alpha_raw_config = []
 	beta_raw_config = []
 	with open(ci_coeff_file, 'r') as cif:
+		counter = 0
 		for lines in cif.readlines():
 			word_list = lines.strip().split(' ')
 			word_list = [i for i in word_list if i != '']
@@ -90,6 +91,10 @@ def parse_ci_coeff(ci_coeff_file, ncas_a, ncas_b, ncore=0):
 			# alpha config, dropping the '0b'
 			alpha_raw_config.append(word_list[0][2:])
 			beta_raw_config.append(word_list[1][2:])
+			counter += 1
+			if ndet > 0 :
+				if counter >= ndet:
+					break
 	
 	num_config = len(ci_coeffs)
 	excit_rank_a = np.zeros(num_config, dtype=np.int)
@@ -111,7 +116,7 @@ def parse_ci_coeff(ci_coeff_file, ncas_a, ncas_b, ncore=0):
 	# Get the maximum excitation rank among ALL the configs
 	max_excit_a = np.max(excit_rank_a)
 	max_excit_b = np.max(excit_rank_b)
-	print(f"The max. excitation rank is {max_excit_a} for alpha and {max_excit_b} for beta section.")
+	print(f"The max excitation rank is {max_excit_a} for alpha and {max_excit_b} for beta section.")
 	return np.array(ci_coeffs), alpha_config, beta_config
 
 def get_sig_dets(ci_coeff_file, thres=0.995):
@@ -183,11 +188,12 @@ def get_sum_ovlp(ci_coeff_file, n_det=1):
 	return sum_coeff
 
 if __name__ == '__main__':
-	CI_PATH_SPECIES = '../scratch/inputs/shci_test_files/CI_coeff.dat'
-	sum_coeff = get_sum_ovlp(CI_PATH_SPECIES, n_det=1000)
+	CI_PATH_SPECIES = '../scratch/inputs/crco4bpy_dz/CI_coeff.dat'
+	sum_coeff = get_sum_ovlp(CI_PATH_SPECIES, n_det=100000)
 	n_det = get_sig_dets(CI_PATH_SPECIES, sum_coeff)
 	ci_coeffs, alpha_config, beta_config = parse_ci_coeff(ci_coeff_file=CI_PATH_SPECIES, 
-													   ncas_a=6, ncas_b=6, ncore=57)
-	np.savetxt('../scratch/outputs/ci_coeff.csv', ci_coeffs, delimiter=',', fmt='%24.16f')
-	np.savetxt('../scratch/outputs/alpha.csv', alpha_config, delimiter=',', fmt='%d')
-	np.savetxt('../scratch/outputs/beta.csv', beta_config, delimiter=',', fmt='%d')
+													   ncas_a=21, ncas_b=21, ncore=35,
+                                                       ndet=5000)
+	#np.savetxt('../scratch/outputs/ci_coeff.csv', ci_coeffs, delimiter=',', fmt='%24.16f')
+	#np.savetxt('../scratch/outputs/alpha.csv', alpha_config, delimiter=',', fmt='%d')
+	#np.savetxt('../scratch/outputs/beta.csv', beta_config, delimiter=',', fmt='%d')

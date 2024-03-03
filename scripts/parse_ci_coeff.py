@@ -57,9 +57,6 @@ def check_new_as_orbs(config_list, ncore_old, ncore_new, nact_old, ndet):
 				if ncore_new + i >= ncore_old + nact_old:
 					print(f"Config {idx} promotes an beta electron to orb_idx {ncore_new + i} outside the old AS!")
 
-
-
-
 if __name__ == "__main__":
 	CI_file = "/Users/aarodynamic95/projects/Research/3dTMV/MR_CASSCF/28/init/large/1e-3/CI_coeff.dat"
 	config = parse_ci_dat(CI_file)
