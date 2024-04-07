@@ -4,7 +4,8 @@ determinant wavefuncton (orthgonal).
 import numpy as np
 import os
 
-def parse_ci_coeff(ci_coeff_file, ncas_a, ncas_b, ncore=0, ndet=0):
+def parse_ci_coeff(ci_coeff_file : str, ncas_a : int, ncas_b : int, ncore=0, 
+				   ndet=0, base_dir="./"):
 	'''Parse a CI_coeff.dat file, for example:
 	```
 	0b111111111111       0b11111111111          0.6208214919329170
@@ -26,18 +27,12 @@ def parse_ci_coeff(ci_coeff_file, ncas_a, ncas_b, ncore=0, ndet=0):
 	ncore : int, optional
 		Number of core orbitals (the doubly occupied orbitals that are not included
 		in the active space). Default 0.
+	base_dir : str
+
 	
 	Returns
 	--------
-	ci_coeffs: numpy.ndarray
-	 	Array of size [n_det], where n_det is the number of configs, storing the 
-		CI expansion coefficients.
-	alpha_config: numpy.ndarray
-		Array of size [max_excit_rank, n_det], where max_excit_rank is the maxium
-		number of occupied orbitals excited in the CI expansion, and n_det is
-		the total number of configurations.
-	beta_config : numpy.ndarray
-		Same as alpha but for beta.
+	None
 	'''
 
 	# Helper
@@ -95,44 +90,58 @@ def parse_ci_coeff(ci_coeff_file, ncas_a, ncas_b, ncore=0, ndet=0):
 			if ndet > 0 :
 				if counter >= ndet:
 					break
-	
 	num_config = len(ci_coeffs) # total number of dets
-	excit_rank = np.zeros(num_config, dtype=np.int32)
+	print(f"Done reading in {num_config} configurations!")
+	excit_rank = np.zeros((num_config, 2), dtype=int)
 	for idx in range(num_config):
 		_, rank_a = process_raw_config(alpha_raw_config[idx], ncas_a, ncore)
 		_, rank_b = process_raw_config(beta_raw_config[idx], ncas_b, ncore)
-		excit_rank[idx] = rank_a + rank_b
+		excit_rank[idx, :] = np.asarray([rank_a,rank_b])
+	np.savetxt(os.path.join(base_dir, 'excit_rank.csv'), excit_rank, fmt='%9d', delimiter=',')
+
 	# Get the "unique" configurations
 	alpha_unique_configs = np.unique(alpha_raw_config)
 	print(f"In {num_config} configs, there are {len(alpha_unique_configs)} unique excitation for alpha.")
 	beta_unique_configs = np.unique(beta_raw_config)
 	print(f"In {num_config} configs, there are {len(beta_unique_configs)} unique excitation for beta.")
-	num_unique_configs = [len(alpha_unique_configs), len(beta_unique_configs)]
+	#num_unique_configs = [len(alpha_unique_configs), len(beta_unique_configs)]
+	# Write to file
+	# The set of unique alpha configurations
+	with open(os.path.join(base_dir, 'unique_alpha_config.dat'), 'w') as f:
+		for i in np.arange(len(alpha_unique_configs)):
+			f.write(f"{alpha_unique_configs[i]}\n")
+	# The set of unique beta configurations
+	with open(os.path.join(base_dir, 'unique_beta_config.dat'), 'w') as f:
+		for i in np.arange(len(beta_unique_configs)):
+			f.write(f"{beta_unique_configs[i]}\n")
 
-	excit_rank_a = np.zeros(num_unique_configs[0], dtype=np.int32)
-	excit_rank_b = np.zeros(num_unique_configs[0], dtype=np.int32)
-	alpha_config = np.zeros((num_unique_configs[0], ncas_a), dtype=np.int32)
-	beta_config = np.zeros((num_unique_configs[0], ncas_b), dtype=np.int32)
+	# Get the maximum excitation rank among ALL the configs
+	max_excit_a = np.max(excit_rank[:, 0])
+	max_excit_b = np.max(excit_rank[:, 1])
+	print(f"The max excitation rank is {max_excit_a} for alpha and {max_excit_b} for beta section.")
+
+	#excit_rank_a = np.zeros(num_unique_configs[0], dtype=np.int32)
+	#excit_rank_b = np.zeros(num_unique_configs[0], dtype=np.int32)
+	#alpha_config = np.zeros((num_unique_configs[0], ncas_a), dtype=np.int32)
+	#beta_config = np.zeros((num_unique_configs[0], ncas_b), dtype=np.int32)
 	# mapping from the actual to the unique config
-	alpha_map = np.zeros(num_config, dtype=np.int32)
-	beta_map = np.zeros(num_config, dtype=np.int32)
 	# Now parse the unique configs to get the mo indices
 	# Alpha
-	for config_idx in np.arange(num_unique_configs[0]):
-		a_array, excit_a = process_raw_config(alpha_unique_configs[config_idx], ncas_a, 
-										ncore)
-		excit_rank_a[config_idx] = excit_a
-		alpha_config[config_idx, :] = a_array
-	# Beta_section
-	for config_idx in np.arange(num_unique_configs[1]):
-		b_array, excit_b = process_raw_config(beta_unique_configs[config_idx], ncas_b, 
-										ncore)
-		excit_rank_b[config_idx] = excit_b
-		beta_config[config_idx, :] = b_array
-	max_excit_a = np.max(excit_rank_a)
-	max_excit_b = np.max(excit_rank_b)
+	#for config_idx in np.arange(num_unique_configs[0]):
+	#	a_array, excit_a = process_raw_config(alpha_unique_configs[config_idx], ncas_a, 
+	#									ncore)
+	#	excit_rank_a[config_idx] = excit_a
+	#	alpha_config[config_idx, :] = a_array
+	## Beta_section
+	#for config_idx in np.arange(num_unique_configs[1]):
+	#	b_array, excit_b = process_raw_config(beta_unique_configs[config_idx], ncas_b, 
+	#									ncore)
+	#	excit_rank_b[config_idx] = excit_b
+	#	beta_config[config_idx, :] = b_array
 
 	# Get the mapping from the actual determinants to the unique values arrays
+	alpha_map = np.zeros(num_config, dtype=int)
+	beta_map = np.zeros(num_config, dtype=int)
 	for idx in np.arange(num_config):
 		# Alpha
 		config = alpha_raw_config[idx]
@@ -144,13 +153,14 @@ def parse_ci_coeff(ci_coeff_file, ncas_a, ncas_b, ncore=0, ndet=0):
 		unq_idx = np.where(beta_unique_configs == config)[0][0]
 		beta_map[idx] = unq_idx
 		if ( idx > 0 and int(idx) % (int(num_config/10)) == 0 ):
-			print(f"Done parsing {idx/num_config*100:.2f} %")
+			print(f"Done parsing {idx/num_config*100:.2f} % of the {num_config} configs...")
 		#print(f'det {idx} with beta config = {config}, the idx in the unique array is {unq_idx}')
 		#print(f"The config in unique config is {alpha_unique_configs[unq_idx]}")
+	with open(os.path.join(base_dir, 'ci_coeff_map.dat'), 'w') as f:
+		for i in np.arange(ndet):
+			f.write(f"{ci_coeffs[i]:24.16f}\t{alpha_map[i]:9d}\t{beta_map[i]:9d}\n")
 	
-	# Get the maximum excitation rank among ALL the configs
-	print(f"The max excitation rank is {max_excit_a} for alpha and {max_excit_b} for beta section.")
-	return np.array(ci_coeffs), alpha_config, beta_config, alpha_map, beta_map, alpha_unique_configs, beta_unique_configs, excit_rank
+	return None
 
 def get_sig_dets(ci_coeff_file, thres=0.995):
 	'''Compute the number of determinants whose sum of CI percentage adds up to
@@ -221,26 +231,12 @@ def get_sum_ovlp(ci_coeff_file, n_det=1):
 	return sum_coeff
 
 if __name__ == '__main__':
-	CI_PATH_SPECIES = '../scratch/inputs/cu2o2/f0/hciscf-32e33o/tight_hci/CI_coeff.dat'
+	# Anthracene 14e14o
+	CI_PATH = './CI_coeff.dat'
+	NACT_A = 7	# number of active electrons, alpha 
+	NACT_B = 7 # number of active electrons, beta
+	NCORE = 36 #
 	ndet = 100000
-	sum_coeff = get_sum_ovlp(CI_PATH_SPECIES, n_det=ndet)
-	#n_det = get_sig_dets(CI_PATH_SPECIES, sum_coeff)
-	ci_coeffs, alpha_config, beta_config, alpha_map, beta_map, alpha_unique, beta_unique, excit_rank = parse_ci_coeff(ci_coeff_file=CI_PATH_SPECIES, 
-													   ncas_a=16, ncas_b=16, ncore=10,
-                                                       ndet=ndet)
-	np.savetxt("../scratch/inputs/cu2o2/f0/hciscf-32e33o/tight_hci/excit_rank.csv", excit_rank)
-	# Write to file
-	#with open('../scratch/outputs/o3-hciscf/unique_alpha_config.dat', 'w') as f:
-	#	for i in np.arange(len(alpha_unique)):
-	#		f.write(f"{alpha_unique[i]}\n")
-	#with open('../scratch/outputs/o3-hciscf/unique_beta_config.dat', 'w') as f:
-	#	for i in np.arange(len(beta_unique)):
-	#		f.write(f"{beta_unique[i]}\n")
-	#with open('../scratch/outputs/o3-hciscf/ci_coeff.dat', 'w') as f:
-	#	for i in np.arange(ndet):
-	#		f.write(f"{ci_coeffs[i]:24.16f}\t{alpha_map[i]:9d}\t{beta_map[i]:9d}\n")
-	
-
-	#np.savetxt('../scratch/outputs/ci_coeff.csv', ci_coeffs, delimiter=',', fmt='%24.16f')
-	#np.savetxt('../scratch/outputs/alpha.csv', alpha_config, delimiter=',', fmt='%d')
-	#np.savetxt('../scratch/outputs/beta.csv', beta_config, delimiter=',', fmt='%d')
+	#n_det = get_sig_dets(CI_PATH, sum_coeff)
+	sum_coeff = get_sum_ovlp(CI_PATH, n_det=ndet)
+	parse_ci_coeff(ci_coeff_file=CI_PATH, ncas_a=NACT_A, ncas_b=NACT_B, ncore=NCORE, ndet=ndet)
